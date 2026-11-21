@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">Vinayagar Fund</string>
+    <string name="tagline">Monthly Vinayagar Festival Contributions</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="sign_in_subtitle">Manage committee collections or pay your monthly Vinayagar festival dues seamlessly via UPI.</string>
+    <string name="signing_in">Signing in…</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_members">Members</string>
+    <string name="nav_reminders">Reminders</string>
+    <string name="nav_reports">Reports</string>
+    <string name="nav_my_dues">My Dues</string>
+    <string name="nav_receipts">Receipts</string>
+    <string name="cd_welcome_art">Vinayagar auspicious lotus emblem illustration</string>
+    <string name="cd_hero_banner">Vinayagar festival temple atmosphere banner</string>
+    <string name="cd_settings">Committee Settings</string>
+    <string name="cd_sign_out">Sign Out</string>
+    <string name="cd_prev_month">Previous Month</string>
+    <string name="cd_next_month">Next Month</string>
+    <string name="cd_whatsapp_remind">Send WhatsApp Reminder</string>
+    <string name="cd_add_member">Add Member</string>
+    <string name="cd_record_payment">Record Payment</string>
+    <string name="cd_edit">Edit</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_copy_upi">Copy UPI ID</string>
+    <string name="cd_upi_qr">Committee UPI Payment QR Code</string>
+    <string name="cd_switch_view">Switch between Admin and Member view</string>
+    <string name="action_pay_upi">Pay Now via UPI</string>
+    <string name="action_submit_utr">Already Paid? Submit UPI Ref</string>
+    <string name="action_send_whatsapp">Send WhatsApp</string>
+    <string name="action_share_report">Share Report</string>
+    <string name="action_export_csv">Export CSV</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_retry">Retry</string>
+</resources>

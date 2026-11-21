@@ -1,0 +1,6 @@
+{
+  "name": "Vinayagar Fund",
+  "description": "Monthly contribution manager for Vinayagar festival committees with UPI payments, 5-day due reminders via WhatsApp, real-time member ledger, and automated collection reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

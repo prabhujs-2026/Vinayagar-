@@ -1,0 +1,207 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized committee administrator account with full real-time read/write privileges.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID of the administrator" },
+        "email": { "type": "string", "description": "Verified Google email of the administrator" },
+        "displayName": { "type": "string", "description": "Display name of the administrator" },
+        "addedByUid": { "type": "string", "description": "UID of the admin who granted admin privileges" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when admin access was granted" }
+      },
+      "required": ["uid", "email", "displayName", "addedByUid", "createdAt"]
+    },
+    "CommitteeSettings": {
+      "title": "CommitteeSettings",
+      "description": "Vinayagar festival committee configuration for UPI collection, monthly deadline, and 5-day WhatsApp reminders.",
+      "type": "object",
+      "properties": {
+        "festivalName": { "type": "string", "description": "Name of the Vinayagar festival committee" },
+        "upiId": { "type": "string", "description": "Committee UPI VPA for receiving monthly contributions" },
+        "upiPayeeName": { "type": "string", "description": "Payee display name used in UPI deep links" },
+        "defaultMonthlyAmount": { "type": "integer", "description": "Default monthly member contribution in INR" },
+        "dueDayOfMonth": { "type": "integer", "description": "Day of the month (1-28) when contributions are due" },
+        "reminderDaysBefore": { "type": "integer", "description": "Number of days before due date to send reminders (default 5)" },
+        "whatsappMessageTemplate": { "type": "string", "description": "Gentle WhatsApp reminder template with placeholders" },
+        "autoReminderEnabled": { "type": "boolean", "description": "Whether automated 5-day due reminder notifications are enabled" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last settings update" }
+      },
+      "required": [
+        "festivalName",
+        "upiId",
+        "upiPayeeName",
+        "defaultMonthlyAmount",
+        "dueDayOfMonth",
+        "reminderDaysBefore",
+        "whatsappMessageTemplate",
+        "autoReminderEnabled",
+        "updatedAt"
+      ]
+    },
+    "AdminSecurity": {
+      "title": "AdminSecurity",
+      "description": "Admin-only secondary username and salted SHA-256 password/PIN lock configuration for the Admin Console.",
+      "type": "object",
+      "properties": {
+        "lockEnabled": { "type": "boolean", "description": "Whether the Admin Console requires username & password unlock" },
+        "adminUsername": { "type": "string", "description": "Changeable admin console username" },
+        "passcodeSalt": { "type": "string", "description": "Random hex salt used for SHA-256 password hashing" },
+        "passcodeHash": { "type": "string", "description": "Hex SHA-256 digest of salt and admin password/PIN" },
+        "updatedByUid": { "type": "string", "description": "UID of the admin who updated the lock" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last security update" }
+      },
+      "required": [
+        "lockEnabled",
+        "adminUsername",
+        "passcodeSalt",
+        "passcodeHash",
+        "updatedByUid",
+        "updatedAt"
+      ]
+    },
+    "Member": {
+      "title": "Member",
+      "description": "Vinayagar festival monthly contributor record managed in real time by administrators.",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string", "description": "Full name of the member" },
+        "phone": { "type": "string", "description": "Mobile/WhatsApp phone number" },
+        "email": { "type": "string", "description": "Member Google email address for self-service payment access" },
+        "emailLower": { "type": "string", "description": "Lowercase normalized email for rule-enforced lookups" },
+        "address": { "type": "string", "description": "Street, house number, or ward note" },
+        "monthlyAmount": { "type": "integer", "description": "Monthly contribution target in INR" },
+        "membershipStatus": { "type": "string", "enum": ["ACTIVE", "PAUSED", "INACTIVE"], "description": "Current membership standing" },
+        "userId": { "type": "string", "description": "Linked Firebase Auth UID if associated" },
+        "lastRemindedMonth": { "type": "string", "description": "Last billing month (YYYY-MM) a WhatsApp reminder was sent, or empty" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when member was added" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when member was last modified" }
+      },
+      "required": [
+        "fullName",
+        "phone",
+        "email",
+        "emailLower",
+        "address",
+        "monthlyAmount",
+        "membershipStatus",
+        "userId",
+        "lastRemindedMonth",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Monthly contribution transaction recorded by admin or paid via UPI by an active member.",
+      "type": "object",
+      "properties": {
+        "memberId": { "type": "string", "description": "Document ID of the associated member" },
+        "memberUserId": { "type": "string", "description": "Denormalized Firebase Auth UID of the member" },
+        "memberEmailLower": { "type": "string", "description": "Denormalized lowercase email of the member" },
+        "memberName": { "type": "string", "description": "Denormalized full name of the member" },
+        "billingMonth": { "type": "string", "description": "Billing period in YYYY-MM format" },
+        "amount": { "type": "integer", "description": "Amount paid in INR" },
+        "paymentMethod": { "type": "string", "enum": ["UPI", "CASH", "BANK_TRANSFER"], "description": "Payment mode used" },
+        "upiRef": { "type": "string", "description": "UPI transaction ID or UTR reference" },
+        "status": { "type": "string", "enum": ["PAID", "PENDING_VERIFICATION", "REJECTED"], "description": "Verification status of the payment" },
+        "notes": { "type": "string", "description": "Optional payment notes or receipt remark" },
+        "recordedByUid": { "type": "string", "description": "UID of the user or admin who created the payment record" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when payment was recorded" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when payment was last modified" }
+      },
+      "required": [
+        "memberId",
+        "memberUserId",
+        "memberEmailLower",
+        "memberName",
+        "billingMonth",
+        "amount",
+        "paymentMethod",
+        "upiRef",
+        "status",
+        "notes",
+        "recordedByUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ReminderLog": {
+      "title": "ReminderLog",
+      "description": "Audit log of gentle WhatsApp payment reminders sent for a billing month.",
+      "type": "object",
+      "properties": {
+        "memberId": { "type": "string", "description": "Target member document ID" },
+        "memberName": { "type": "string", "description": "Target member name" },
+        "memberPhone": { "type": "string", "description": "Target WhatsApp phone number" },
+        "billingMonth": { "type": "string", "description": "Billing month (YYYY-MM) for which reminder was sent" },
+        "channel": { "type": "string", "enum": ["WHATSAPP"], "description": "Delivery channel" },
+        "sentByUid": { "type": "string", "description": "Admin UID who initiated the reminder" },
+        "messagePreview": { "type": "string", "description": "Gentle reminder message text sent" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when reminder was logged" }
+      },
+      "required": [
+        "memberId",
+        "memberName",
+        "memberPhone",
+        "billingMonth",
+        "channel",
+        "sentByUid",
+        "messagePreview",
+        "createdAt"
+      ]
+    },
+    "JoinRequest": {
+      "title": "JoinRequest",
+      "description": "Self-registration request submitted by a signed-in user waiting for admin approval into the members directory.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the requester" },
+        "fullName": { "type": "string", "description": "Full name provided by requester" },
+        "emailLower": { "type": "string", "description": "Lowercase verified Google email of requester" },
+        "phone": { "type": "string", "description": "WhatsApp phone number provided by requester" },
+        "address": { "type": "string", "description": "Street or house details" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"], "description": "Request approval status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp when request was submitted" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp when request was updated" }
+      },
+      "required": [
+        "userId",
+        "fullName",
+        "emailLower",
+        "phone",
+        "address",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Authoritative list of committee administrators"
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/CommitteeSettings" },
+      "description": "Committee configuration document (committee) and admin-only lock settings (admin_security)"
+    },
+    "/members/{memberId}": {
+      "schema": { "$ref": "#/entities/Member" },
+      "description": "Monthly festival contribution member directory"
+    },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Monthly member contribution payment ledger"
+    },
+    "/reminder_logs/{logId}": {
+      "schema": { "$ref": "#/entities/ReminderLog" },
+      "description": "Audit log of WhatsApp payment reminders"
+    },
+    "/join_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/JoinRequest" },
+      "description": "Pending membership registration requests keyed by requester UID"
+    }
+  }
+}

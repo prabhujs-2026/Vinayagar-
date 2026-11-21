@@ -1,0 +1,355 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Core Security Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function hasVerifiedEmail() {
+      return isSignedIn() &&
+             request.auth.token.email_verified == true &&
+             request.auth.token.email is string &&
+             request.auth.token.email.size() > 0;
+    }
+
+    function isBootstrappedAdmin() {
+      return hasVerifiedEmail() && request.auth.token.email.lower() == 'prabhujs30@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() ||
+             (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isValidBillingMonth(month) {
+      return month is string && month.size() == 7 && month.matches('^[0-9]{4}-[0-9]{2}$');
+    }
+
+    // --- Entity Validation Blueprints ---
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'addedByUid', 'createdAt']) &&
+             data.keys().hasOnly(['uid', 'email', 'displayName', 'addedByUid', 'createdAt']) &&
+             data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             data.addedByUid is string && data.addedByUid.size() >= 1 && data.addedByUid.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidCommitteeSettings(data) {
+      return data.keys().hasAll([
+               'festivalName', 'upiId', 'upiPayeeName', 'defaultMonthlyAmount',
+               'dueDayOfMonth', 'reminderDaysBefore', 'whatsappMessageTemplate',
+               'autoReminderEnabled', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'festivalName', 'upiId', 'upiPayeeName', 'defaultMonthlyAmount',
+               'dueDayOfMonth', 'reminderDaysBefore', 'whatsappMessageTemplate',
+               'autoReminderEnabled', 'updatedAt'
+             ]) &&
+             data.festivalName is string && data.festivalName.size() >= 1 && data.festivalName.size() <= 100 &&
+             data.upiId is string && data.upiId.size() >= 3 && data.upiId.size() <= 100 &&
+             data.upiPayeeName is string && data.upiPayeeName.size() >= 1 && data.upiPayeeName.size() <= 80 &&
+             data.defaultMonthlyAmount is int && data.defaultMonthlyAmount >= 1 && data.defaultMonthlyAmount <= 1000000 &&
+             data.dueDayOfMonth is int && data.dueDayOfMonth >= 1 && data.dueDayOfMonth <= 28 &&
+             data.reminderDaysBefore is int && data.reminderDaysBefore >= 1 && data.reminderDaysBefore <= 15 &&
+             data.whatsappMessageTemplate is string && data.whatsappMessageTemplate.size() >= 10 && data.whatsappMessageTemplate.size() <= 600 &&
+             data.autoReminderEnabled is bool &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAdminSecurity(data) {
+      return data.keys().hasAll([
+               'lockEnabled', 'adminUsername', 'passcodeSalt',
+               'passcodeHash', 'updatedByUid', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'lockEnabled', 'adminUsername', 'passcodeSalt',
+               'passcodeHash', 'updatedByUid', 'updatedAt'
+             ]) &&
+             data.lockEnabled is bool &&
+             data.adminUsername is string && data.adminUsername.size() <= 60 &&
+             data.passcodeSalt is string && data.passcodeSalt.size() <= 64 &&
+             data.passcodeHash is string && data.passcodeHash.size() <= 128 &&
+             (!data.lockEnabled || (data.adminUsername.size() >= 3 && data.passcodeSalt.size() >= 16 && data.passcodeHash.size() == 64)) &&
+             data.updatedByUid is string && data.updatedByUid.size() >= 1 && data.updatedByUid.size() <= 128 &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidMember(data) {
+      return data.keys().hasAll([
+               'fullName', 'phone', 'email', 'emailLower', 'address',
+               'monthlyAmount', 'membershipStatus', 'userId', 'lastRemindedMonth',
+               'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'fullName', 'phone', 'email', 'emailLower', 'address',
+               'monthlyAmount', 'membershipStatus', 'userId', 'lastRemindedMonth',
+               'createdAt', 'updatedAt'
+             ]) &&
+             data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 80 &&
+             data.phone is string && data.phone.size() >= 7 && data.phone.size() <= 20 &&
+             data.email is string && data.email.size() <= 120 &&
+             data.emailLower is string && data.emailLower.size() <= 120 &&
+             data.address is string && data.address.size() <= 160 &&
+             data.monthlyAmount is int && data.monthlyAmount >= 1 && data.monthlyAmount <= 1000000 &&
+             data.membershipStatus is string && data.membershipStatus in ['ACTIVE', 'PAUSED', 'INACTIVE'] &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.lastRemindedMonth is string && (data.lastRemindedMonth.size() == 0 || isValidBillingMonth(data.lastRemindedMonth)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPayment(data) {
+      return data.keys().hasAll([
+               'memberId', 'memberUserId', 'memberEmailLower', 'memberName',
+               'billingMonth', 'amount', 'paymentMethod', 'upiRef',
+               'status', 'notes', 'recordedByUid', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'memberId', 'memberUserId', 'memberEmailLower', 'memberName',
+               'billingMonth', 'amount', 'paymentMethod', 'upiRef',
+               'status', 'notes', 'recordedByUid', 'createdAt', 'updatedAt'
+             ]) &&
+             isValidId(data.memberId) &&
+             data.memberUserId is string && data.memberUserId.size() <= 128 &&
+             data.memberEmailLower is string && data.memberEmailLower.size() <= 120 &&
+             data.memberName is string && data.memberName.size() >= 1 && data.memberName.size() <= 80 &&
+             isValidBillingMonth(data.billingMonth) &&
+             data.amount is int && data.amount >= 1 && data.amount <= 1000000 &&
+             data.paymentMethod is string && data.paymentMethod in ['UPI', 'CASH', 'BANK_TRANSFER'] &&
+             data.upiRef is string && data.upiRef.size() <= 100 &&
+             data.status is string && data.status in ['PAID', 'PENDING_VERIFICATION', 'REJECTED'] &&
+             data.notes is string && data.notes.size() <= 240 &&
+             data.recordedByUid is string && data.recordedByUid.size() >= 1 && data.recordedByUid.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidReminderLog(data) {
+      return data.keys().hasAll([
+               'memberId', 'memberName', 'memberPhone', 'billingMonth',
+               'channel', 'sentByUid', 'messagePreview', 'createdAt'
+             ]) &&
+             data.keys().hasOnly([
+               'memberId', 'memberName', 'memberPhone', 'billingMonth',
+               'channel', 'sentByUid', 'messagePreview', 'createdAt'
+             ]) &&
+             isValidId(data.memberId) &&
+             data.memberName is string && data.memberName.size() >= 1 && data.memberName.size() <= 80 &&
+             data.memberPhone is string && data.memberPhone.size() >= 7 && data.memberPhone.size() <= 20 &&
+             isValidBillingMonth(data.billingMonth) &&
+             data.channel is string && data.channel == 'WHATSAPP' &&
+             data.sentByUid is string && data.sentByUid.size() >= 1 && data.sentByUid.size() <= 128 &&
+             data.messagePreview is string && data.messagePreview.size() >= 1 && data.messagePreview.size() <= 500 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidJoinRequest(data) {
+      return data.keys().hasAll([
+               'userId', 'fullName', 'emailLower', 'phone', 'address',
+               'status', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'userId', 'fullName', 'emailLower', 'phone', 'address',
+               'status', 'createdAt', 'updatedAt'
+             ]) &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 80 &&
+             data.emailLower is string && data.emailLower.size() >= 3 && data.emailLower.size() <= 120 &&
+             data.phone is string && data.phone.size() >= 7 && data.phone.size() <= 20 &&
+             data.address is string && data.address.size() <= 160 &&
+             data.status is string && data.status in ['PENDING', 'APPROVED', 'REJECTED'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isMemberRecordOwner(memberData) {
+      return (memberData.userId != '' && memberData.userId == request.auth.uid) ||
+             (hasVerifiedEmail() && memberData.emailLower != '' && memberData.emailLower == request.auth.token.email.lower());
+    }
+
+    function isPaymentOwner(paymentData) {
+      return (paymentData.memberUserId != '' && paymentData.memberUserId == request.auth.uid) ||
+             (hasVerifiedEmail() && paymentData.memberEmailLower != '' && paymentData.memberEmailLower == request.auth.token.email.lower());
+    }
+
+    function isOwnActiveMemberPayment(memberId, data) {
+      let memberPath = /databases/$(database)/documents/members/$(memberId);
+      let member = get(memberPath).data;
+      return exists(memberPath) &&
+             member.membershipStatus == 'ACTIVE' &&
+             isMemberRecordOwner(member) &&
+             data.memberName == member.fullName &&
+             data.memberUserId == member.userId &&
+             data.memberEmailLower == member.emailLower;
+    }
+
+    // --- Collection: /admins/{adminUid} ---
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) && (request.auth.uid == adminUid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() &&
+                       isValidId(adminUid) &&
+                       isValidAdminUser(incoming()) &&
+                       incoming().uid == adminUid &&
+                       incoming().addedByUid == request.auth.uid &&
+                       isAdmin();
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(adminUid) && isAdmin();
+    }
+
+    // --- Collection: /settings/{settingId} ---
+    match /settings/{settingId} {
+      allow get: if isSignedIn() && (
+                    settingId == 'committee' ||
+                    (settingId == 'admin_security' && isAdmin())
+                 );
+      allow list: if false;
+      allow create: if isSignedIn() && isAdmin() && (
+                       (settingId == 'committee' && isValidCommitteeSettings(incoming())) ||
+                       (settingId == 'admin_security' &&
+                        isValidAdminSecurity(incoming()) &&
+                        incoming().updatedByUid == request.auth.uid)
+                    );
+      allow update: if isSignedIn() && isAdmin() && (
+                       (settingId == 'committee' &&
+                        isValidCommitteeSettings(incoming()) &&
+                        incoming().diff(existing()).affectedKeys().hasOnly([
+                          'festivalName', 'upiId', 'upiPayeeName', 'defaultMonthlyAmount',
+                          'dueDayOfMonth', 'reminderDaysBefore', 'whatsappMessageTemplate',
+                          'autoReminderEnabled', 'updatedAt'
+                        ])) ||
+                       (settingId == 'admin_security' &&
+                        isValidAdminSecurity(incoming()) &&
+                        incoming().updatedByUid == request.auth.uid &&
+                        incoming().diff(existing()).affectedKeys().hasOnly([
+                          'lockEnabled', 'adminUsername', 'passcodeSalt',
+                          'passcodeHash', 'updatedByUid', 'updatedAt'
+                        ]))
+                    );
+      allow delete: if false;
+    }
+
+    // --- Collection: /members/{memberId} ---
+    // Admin only can create, edit, delete, and modify member records & membership status.
+    // Members can strictly read only their own linked record.
+    match /members/{memberId} {
+      allow get: if isSignedIn() && isValidId(memberId) && (
+                    isMemberRecordOwner(existing()) || isAdmin()
+                 );
+      allow list: if isSignedIn() && (
+                     resource.data.userId == request.auth.uid ||
+                     (hasVerifiedEmail() && resource.data.emailLower == request.auth.token.email.lower()) ||
+                     isAdmin()
+                  );
+      allow create: if isSignedIn() &&
+                       isValidId(memberId) &&
+                       isValidMember(incoming()) &&
+                       isAdmin();
+      allow update: if isSignedIn() &&
+                       isValidId(memberId) &&
+                       isValidMember(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'fullName', 'phone', 'email', 'emailLower', 'address',
+                         'monthlyAmount', 'membershipStatus', 'userId',
+                         'lastRemindedMonth', 'updatedAt'
+                       ]) &&
+                       isAdmin();
+      allow delete: if isSignedIn() && isValidId(memberId) && isAdmin();
+    }
+
+    // --- Collection: /payments/{paymentId} ---
+    // Active members can submit their own UPI due payments; only Admin can edit, verify, or delete transactions.
+    match /payments/{paymentId} {
+      allow get: if isSignedIn() && isValidId(paymentId) && (
+                    isPaymentOwner(existing()) || isAdmin()
+                 );
+      allow list: if isSignedIn() && (
+                     resource.data.memberUserId == request.auth.uid ||
+                     (hasVerifiedEmail() && resource.data.memberEmailLower == request.auth.token.email.lower()) ||
+                     isAdmin()
+                  );
+      allow create: if isSignedIn() &&
+                       isValidId(paymentId) &&
+                       isValidPayment(incoming()) &&
+                       incoming().recordedByUid == request.auth.uid && (
+                         (isAdmin() && exists(/databases/$(database)/documents/members/$(incoming().memberId))) ||
+                         (incoming().paymentMethod == 'UPI' &&
+                          incoming().status in ['PAID', 'PENDING_VERIFICATION'] &&
+                          isOwnActiveMemberPayment(incoming().memberId, incoming()))
+                       );
+      allow update: if isSignedIn() &&
+                       isValidId(paymentId) &&
+                       isValidPayment(incoming()) &&
+                       incoming().memberId == existing().memberId &&
+                       incoming().recordedByUid == existing().recordedByUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'memberUserId', 'memberEmailLower', 'memberName', 'billingMonth',
+                         'amount', 'paymentMethod', 'upiRef', 'status', 'notes', 'updatedAt'
+                       ]) &&
+                       isAdmin();
+      allow delete: if isSignedIn() && isValidId(paymentId) && isAdmin();
+    }
+
+    // --- Collection: /reminder_logs/{logId} ---
+    // Strictly Admin-only audit trail for WhatsApp reminders.
+    match /reminder_logs/{logId} {
+      allow get: if isSignedIn() && isValidId(logId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isSignedIn() &&
+                       isValidId(logId) &&
+                       isValidReminderLog(incoming()) &&
+                       incoming().sentByUid == request.auth.uid &&
+                       exists(/databases/$(database)/documents/members/$(incoming().memberId)) &&
+                       isAdmin();
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(logId) && isAdmin();
+    }
+
+    // --- Collection: /join_requests/{requestId} ---
+    // Signed-in users not yet in /members can submit a join request keyed by their UID.
+    match /join_requests/{requestId} {
+      allow get: if isSignedIn() && isValidId(requestId) && (request.auth.uid == requestId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       request.auth.uid == requestId &&
+                       isValidJoinRequest(incoming()) &&
+                       incoming().userId == request.auth.uid &&
+                       hasVerifiedEmail() &&
+                       incoming().emailLower == request.auth.token.email.lower() &&
+                       incoming().status == 'PENDING';
+      allow update: if isSignedIn() &&
+                       isValidId(requestId) &&
+                       isValidJoinRequest(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().emailLower == existing().emailLower &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+                       isAdmin();
+      allow delete: if isSignedIn() && isValidId(requestId) && (request.auth.uid == requestId || isAdmin());
+    }
+  }
+}
