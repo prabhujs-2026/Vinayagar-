@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PersonAdd
@@ -23,6 +24,8 @@ import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -38,6 +41,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -236,9 +240,16 @@ fun PaymentEditorDialog(
         )
     }
     var memberDropdownOpen by remember { mutableStateOf(false) }
-    var monthText by remember(initialPayment, billingMonth) {
-        mutableStateOf(initialPayment?.billingMonth?.ifBlank { billingMonth } ?: billingMonth)
+    var billingDateText by remember(initialPayment, billingMonth) {
+        mutableStateOf(
+            if (initialPayment != null) {
+                DateAndReportUtils.extractBillingDateIso(initialPayment)
+            } else {
+                DateAndReportUtils.defaultBillingDateForMonth(billingMonth)
+            }
+        )
     }
+    var showDatePicker by remember { mutableStateOf(false) }
     var amountText by remember(initialPayment, selectedMember) {
         mutableStateOf(
             (initialPayment?.amount ?: selectedMember?.monthlyAmount ?: 500L).toString()
@@ -251,7 +262,9 @@ fun PaymentEditorDialog(
         mutableStateOf(initialPayment?.statusEnum() ?: PaymentStatus.PAID)
     }
     var upiRef by remember(initialPayment) { mutableStateOf(initialPayment?.upiRef ?: "") }
-    var notes by remember(initialPayment) { mutableStateOf(initialPayment?.notes ?: "") }
+    var notes by remember(initialPayment) {
+        mutableStateOf(DateAndReportUtils.stripDateTagFromNotes(initialPayment?.notes ?: ""))
+    }
     var validationError by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
@@ -309,11 +322,35 @@ fun PaymentEditorDialog(
                 }
 
                 OutlinedTextField(
-                    value = monthText,
-                    onValueChange = { monthText = it; validationError = null },
-                    label = { Text("Billing Month (YYYY-MM) *") },
+                    value = billingDateText,
+                    onValueChange = { billingDateText = it; validationError = null },
+                    label = { Text("Billing Month & Date (YYYY-MM-DD) *") },
+                    placeholder = { Text("2026-11-21") },
+                    supportingText = {
+                        val preview = if (DateAndReportUtils.isValidIsoDate(billingDateText)) {
+                            val derivedMonth = billingDateText.take(7)
+                            "Billing Month: ${DateAndReportUtils.formatBillingMonth(derivedMonth)} • Date: ${DateAndReportUtils.formatIsoDate(billingDateText)}"
+                        } else {
+                            "Format: YYYY-MM-DD (or tap calendar icon)"
+                        }
+                        Text(preview)
+                    },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = { showDatePicker = true },
+                            modifier = Modifier.testTag("pick_billing_date_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.CalendarMonth,
+                                contentDescription = "Pick Billing Date",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("billing_date_input")
                 )
 
                 OutlinedTextField(
@@ -409,18 +446,21 @@ fun PaymentEditorDialog(
             Button(
                 onClick = {
                     val amt = amountText.toLongOrNull() ?: 0L
+                    val trimmedDate = billingDateText.trim()
                     when {
                         initialPayment == null && selectedMember == null ->
                             validationError = "Add a member first before recording a payment."
-                        !monthText.matches(Regex("^[0-9]{4}-[0-9]{2}$")) ->
-                            validationError = "Use YYYY-MM format (e.g., 2026-11)."
+                        !DateAndReportUtils.isValidIsoDate(trimmedDate) ->
+                            validationError = "Use a valid YYYY-MM-DD date (e.g., 2026-11-21)."
                         amt !in 1L..1_000_000L ->
                             validationError = "Amount must be between ₹1 and ₹10,00,000."
                         else -> {
+                            val derivedMonth = trimmedDate.take(7)
+                            val savedNotes = DateAndReportUtils.attachBillingDateToNotes(trimmedDate, notes)
                             if (initialPayment == null) {
-                                onCreate(selectedMember!!, monthText, amt, method, upiRef.trim(), status, notes.trim())
+                                onCreate(selectedMember!!, derivedMonth, amt, method, upiRef.trim(), status, savedNotes)
                             } else {
-                                onUpdate(initialPayment.id, monthText, amt, method, upiRef.trim(), status, notes.trim())
+                                onUpdate(initialPayment.id, derivedMonth, amt, method, upiRef.trim(), status, savedNotes)
                             }
                         }
                     }
@@ -436,6 +476,38 @@ fun PaymentEditorDialog(
             }
         }
     )
+
+    if (showDatePicker) {
+        val initialMillis = remember(billingDateText) {
+            DateAndReportUtils.isoDateToUtcMillis(billingDateText.trim())
+                ?: System.currentTimeMillis()
+        }
+        val pickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pickerState.selectedDateMillis?.let { millis ->
+                            billingDateText = DateAndReportUtils.epochMillisToIsoDate(millis)
+                            validationError = null
+                        }
+                        showDatePicker = false
+                    },
+                    modifier = Modifier.testTag("confirm_billing_date_button")
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        ) {
+            DatePicker(state = pickerState)
+        }
+    }
 }
 
 @Composable

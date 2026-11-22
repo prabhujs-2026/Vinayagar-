@@ -25,6 +25,11 @@
     <string name="cd_upi_qr">Committee UPI Payment QR Code</string>
     <string name="cd_switch_view">Switch between Admin and Member view</string>
     <string name="action_pay_upi">Pay Now via UPI</string>
+    <string name="action_upi_pay">UPI Pay</string>
+    <string name="action_mark_upi_paid">Mark UPI Paid</string>
+    <string name="action_share_upi_whatsapp">Send UPI via WhatsApp</string>
+    <string name="cd_member_upi_options">Open UPI payment options for member</string>
+    <string name="title_member_upi_payment">Member UPI Payment</string>
     <string name="action_submit_utr">Already Paid? Submit UPI Ref</string>
     <string name="action_send_whatsapp">Send WhatsApp</string>
     <string name="action_share_report">Share Report</string>

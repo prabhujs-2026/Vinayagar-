@@ -100,6 +100,110 @@ object DateAndReportUtils {
         return SimpleDateFormat("dd MMM yyyy", Locale.US).format(cal.time)
     }
 
+    fun formatBillingMonthRange(billingMonth: String): String {
+        val cal = parseMonthToCalendar(billingMonth)
+        val maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+        val monthYear = SimpleDateFormat("MMM yyyy", Locale.US).format(cal.time)
+        return String.format(Locale.US, "01–%02d %s", maxDay, monthYear)
+    }
+
+    fun todayIsoDate(): String {
+        val cal = Calendar.getInstance()
+        return String.format(
+            Locale.US,
+            "%04d-%02d-%02d",
+            cal.get(Calendar.YEAR),
+            cal.get(Calendar.MONTH) + 1,
+            cal.get(Calendar.DAY_OF_MONTH)
+        )
+    }
+
+    fun defaultBillingDateForMonth(billingMonth: String): String {
+        return if (billingMonth == currentBillingMonth()) {
+            todayIsoDate()
+        } else {
+            "$billingMonth-01"
+        }
+    }
+
+    fun isValidIsoDate(dateStr: String): Boolean {
+        if (!dateStr.matches(Regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))) return false
+        return try {
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { isLenient = false }
+            sdf.parse(dateStr) != null
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun formatIsoDate(isoDate: String): String {
+        if (!isValidIsoDate(isoDate)) return isoDate
+        return try {
+            val parser = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { isLenient = false }
+            val date = parser.parse(isoDate) ?: return isoDate
+            SimpleDateFormat("dd MMM yyyy", Locale.US).format(date)
+        } catch (_: Exception) {
+            isoDate
+        }
+    }
+
+    fun epochMillisToIsoDate(utcMillis: Long): String {
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        return sdf.format(Date(utcMillis))
+    }
+
+    fun isoDateToUtcMillis(isoDate: String): Long? {
+        if (!isValidIsoDate(isoDate)) return null
+        return try {
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+                isLenient = false
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }
+            sdf.parse(isoDate)?.time
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private val dateTagRegex = Regex("""^\[Date:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})]\s*""")
+
+    fun extractBillingDateIso(payment: Payment): String {
+        val match = dateTagRegex.find(payment.notes.trim())
+        if (match != null) {
+            val candidate = match.groupValues[1]
+            if (isValidIsoDate(candidate)) return candidate
+        }
+        val created = payment.createdAt?.toDate()
+        if (created != null) {
+            val createdIso = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(created)
+            if (createdIso.startsWith(payment.billingMonth)) {
+                return createdIso
+            }
+        }
+        return defaultBillingDateForMonth(payment.billingMonth)
+    }
+
+    fun formatPaymentDate(payment: Payment): String {
+        return formatIsoDate(extractBillingDateIso(payment))
+    }
+
+    fun stripDateTagFromNotes(notes: String): String {
+        return dateTagRegex.replace(notes.trim(), "").trim()
+    }
+
+    fun attachBillingDateToNotes(isoDate: String, rawNotes: String): String {
+        val cleanNotes = stripDateTagFromNotes(rawNotes)
+        if (!isValidIsoDate(isoDate)) return cleanNotes.take(240)
+        val combined = if (cleanNotes.isBlank()) {
+            "[Date: $isoDate]"
+        } else {
+            "[Date: $isoDate] $cleanNotes"
+        }
+        return combined.take(240)
+    }
+
     /**
      * Positive = days remaining before deadline; 0 = due today; Negative = overdue days.
      */
@@ -308,7 +412,7 @@ object DateAndReportUtils {
             .associateBy { it.memberId }
 
         return buildString {
-            appendLine("Member Name,Phone,Email,Membership Status,Monthly Target (INR),Payment Status,Amount Paid (INR),Method,UPI Ref,Notes")
+            appendLine("Member Name,Phone,Email,Membership Status,Monthly Target (INR),Payment Status,Payment Date,Amount Paid (INR),Method,UPI Ref,Notes")
             members.forEach { member ->
                 val p = paymentByMember[member.id]
                 val row = listOf(
@@ -318,10 +422,11 @@ object DateAndReportUtils {
                     member.membershipStatus,
                     member.monthlyAmount.toString(),
                     p?.status ?: "PENDING",
+                    p?.let { formatPaymentDate(it) } ?: "",
                     (p?.amount ?: 0L).toString(),
                     p?.paymentMethod ?: "",
                     p?.upiRef ?: "",
-                    p?.notes ?: ""
+                    p?.let { stripDateTagFromNotes(it.notes) } ?: ""
                 ).joinToString(",") { cell ->
                     "\"${cell.replace("\"", "\"\"")}\""
                 }

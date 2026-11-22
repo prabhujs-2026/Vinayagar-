@@ -97,6 +97,7 @@ import com.example.ui.admin.AdminRemindersScreen
 import com.example.ui.admin.AdminReportsScreen
 import com.example.ui.admin.CommitteeSettingsDialog
 import com.example.ui.admin.MemberEditorDialog
+import com.example.ui.admin.MemberUpiPaymentDialog
 import com.example.ui.admin.PaymentEditorDialog
 import com.example.ui.components.DestructiveConfirmDialog
 import com.example.ui.member.MemberDuesScreen
@@ -219,6 +220,7 @@ private fun VinayagarAppShell(
     var editingPayment by remember { mutableStateOf<Payment?>(null) }
     var paymentTargetMember by remember { mutableStateOf<Member?>(null) }
     var confirmDeletePayment by remember { mutableStateOf<Payment?>(null) }
+    var upiTargetMember by remember { mutableStateOf<Member?>(null) }
 
     var showSettingsDialog by remember { mutableStateOf(false) }
 
@@ -585,6 +587,9 @@ private fun VinayagarAppShell(
                                             paymentTargetMember = m
                                             showPaymentEditor = true
                                         },
+                                        onOpenUpiOptions = { m ->
+                                            upiTargetMember = m
+                                        },
                                         onSendWhatsAppReminder = sendWhatsAppForMember,
                                         modifier = contentModifier
                                     )
@@ -595,6 +600,9 @@ private fun VinayagarAppShell(
                                         onPrevMonth = viewModel::previousMonth,
                                         onNextMonth = viewModel::nextMonth,
                                         onSendWhatsAppReminder = sendWhatsAppForMember,
+                                        onOpenUpiOptions = { m ->
+                                            upiTargetMember = m
+                                        },
                                         onShareGroupNotice = { pending ->
                                             val notice = DateAndReportUtils.buildGroupReminderMessage(
                                                 billingMonth = selectedMonth,
@@ -670,6 +678,7 @@ private fun VinayagarAppShell(
                                     editingPayment = editingPayment,
                                     paymentTargetMember = paymentTargetMember,
                                     confirmDeletePayment = confirmDeletePayment,
+                                    upiTargetMember = upiTargetMember,
                                     showSettingsDialog = showSettingsDialog,
                                     onDismissMemberEditor = { showMemberEditor = false },
                                     onSaveMember = { name, phone, email, addr, amt, status ->
@@ -708,6 +717,11 @@ private fun VinayagarAppShell(
                                         confirmDeletePayment = null
                                     },
                                     onDismissDeletePayment = { confirmDeletePayment = null },
+                                    onDismissUpiDialog = { upiTargetMember = null },
+                                    onSendWhatsAppUpi = sendWhatsAppForMember,
+                                    onShowUpiMessage = { msg ->
+                                        scope.launch { snackbarHostState.showSnackbar(msg) }
+                                    },
                                     onDismissSettings = { showSettingsDialog = false },
                                     onSaveSettings = { s ->
                                         viewModel.saveSettings(s)
@@ -776,6 +790,7 @@ private fun AdminModalsHost(
     editingPayment: Payment?,
     paymentTargetMember: Member?,
     confirmDeletePayment: Payment?,
+    upiTargetMember: Member?,
     showSettingsDialog: Boolean,
     onDismissMemberEditor: () -> Unit,
     onSaveMember: (String, String, String, String, Long, MembershipStatus) -> Unit,
@@ -788,6 +803,9 @@ private fun AdminModalsHost(
     onRequestDeletePayment: (Payment) -> Unit,
     onConfirmDeletePayment: (Payment) -> Unit,
     onDismissDeletePayment: () -> Unit,
+    onDismissUpiDialog: () -> Unit,
+    onSendWhatsAppUpi: (Member) -> Unit,
+    onShowUpiMessage: (String) -> Unit,
     onDismissSettings: () -> Unit,
     onSaveSettings: (com.example.data.CommitteeSettings) -> Unit,
     onSaveAdminLock: (Boolean, String, String) -> Unit,
@@ -832,6 +850,24 @@ private fun AdminModalsHost(
             message = "Remove the ${DateAndReportUtils.formatInr(confirmDeletePayment.amount)} payment record for ${confirmDeletePayment.memberName}?",
             onConfirm = { onConfirmDeletePayment(confirmDeletePayment) },
             onDismiss = onDismissDeletePayment
+        )
+    }
+
+    if (upiTargetMember != null) {
+        val alreadyPaid = snapshot.payments.any {
+            it.memberId == upiTargetMember.id &&
+                it.billingMonth == selectedMonth &&
+                it.statusEnum() == PaymentStatus.PAID
+        }
+        MemberUpiPaymentDialog(
+            member = upiTargetMember,
+            billingMonth = selectedMonth,
+            settings = snapshot.settings,
+            isAlreadyPaid = alreadyPaid,
+            onRecordUpiPayment = onCreatePayment,
+            onSendWhatsAppUpi = onSendWhatsAppUpi,
+            onShowMessage = onShowUpiMessage,
+            onDismiss = onDismissUpiDialog
         )
     }
 

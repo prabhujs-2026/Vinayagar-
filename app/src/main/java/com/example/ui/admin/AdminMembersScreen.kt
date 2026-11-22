@@ -25,7 +25,10 @@ import androidx.compose.material.icons.automirrored.rounded.Chat
 import androidx.compose.material.icons.rounded.AddCard
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -34,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,8 +46,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -76,6 +83,7 @@ fun AdminMembersScreen(
     onAddMember: () -> Unit,
     onEditMember: (Member) -> Unit,
     onRecordPaymentForMember: (Member) -> Unit,
+    onOpenUpiOptions: (Member) -> Unit,
     onSendWhatsAppReminder: (Member) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -187,6 +195,7 @@ fun AdminMembersScreen(
                         .testTag("member_card_${member.id}")
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
+                        val upiActionDescription = stringResource(R.string.cd_member_upi_options)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -219,7 +228,8 @@ fun AdminMembersScreen(
                                         overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
-                                        text = member.phone + if (member.address.isNotBlank()) " • ${member.address}" else "",
+                                        text = "${DateAndReportUtils.formatInr(member.monthlyAmount)} • ${member.phone}" +
+                                            if (member.address.isNotBlank()) " • ${member.address}" else "",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
@@ -228,12 +238,39 @@ fun AdminMembersScreen(
                                 }
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = DateAndReportUtils.formatInr(member.monthlyAmount),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            Button(
+                                onClick = { onOpenUpiOptions(member) },
+                                colors = if (!isPaid && statusEnum == MembershipStatus.ACTIVE) {
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondary,
+                                        contentColor = Color.White
+                                    )
+                                } else {
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .minimumInteractiveComponentSize()
+                                    .semantics { contentDescription = "$upiActionDescription: ${member.fullName}" }
+                                    .testTag("upi_pay_member_${member.id}")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.QrCode2,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = stringResource(R.string.action_upi_pay),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(10.dp))

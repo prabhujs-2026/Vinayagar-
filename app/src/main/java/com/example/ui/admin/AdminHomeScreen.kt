@@ -365,7 +365,7 @@ fun AdminHomeScreen(
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Text(
-                                text = "${DateAndReportUtils.formatInr(payment.amount)} • ${DateAndReportUtils.formatBillingMonth(payment.billingMonth)}",
+                                text = "${DateAndReportUtils.formatInr(payment.amount)} • ${DateAndReportUtils.formatPaymentDate(payment)} (${DateAndReportUtils.formatShortMonth(payment.billingMonth)})",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -606,7 +606,7 @@ fun TransactionRowCard(
                         text = buildString {
                             append(payment.methodEnum().label)
                             if (payment.upiRef.isNotBlank()) append(" • ${payment.upiRef}")
-                            append(" • ${DateAndReportUtils.formatShortMonth(payment.billingMonth)}")
+                            append(" • ${DateAndReportUtils.formatPaymentDate(payment)}")
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

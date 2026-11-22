@@ -70,7 +70,7 @@ fun MonthSelectorBar(
 ) {
     val formatted = remember(billingMonth) { DateAndReportUtils.formatBillingMonth(billingMonth) }
     val dueLabel = remember(billingMonth, dueDayOfMonth) {
-        "Due ${DateAndReportUtils.formatDueDate(billingMonth, dueDayOfMonth)}"
+        "${DateAndReportUtils.formatBillingMonthRange(billingMonth)} • Due ${DateAndReportUtils.formatDueDate(billingMonth, dueDayOfMonth)}"
     }
 
     Surface(

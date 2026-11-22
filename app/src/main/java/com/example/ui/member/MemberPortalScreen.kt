@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.HourglassTop
+import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material.icons.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Verified
@@ -46,6 +47,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +65,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.JoinRequestStatus
@@ -220,13 +223,49 @@ fun MemberDuesScreen(
                                 Text(
                                     text = "Namaskaram, ${member.fullName}",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = Color(0xFFFFEBC2)
+                                    color = Color(0xFFFFEBC2),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
                                 )
-                                StatusPill(
-                                    label = member.statusEnum().label,
-                                    containerColor = Color.White.copy(alpha = 0.2f),
-                                    contentColor = Color.White
-                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                if (isActive && !isPaid && !isPendingReview) {
+                                    Button(
+                                        onClick = {
+                                            lastLaunchedTxnRef = txnRef
+                                            val upiIntent = Intent(Intent.ACTION_VIEW, upiUri)
+                                            val chooser = Intent.createChooser(upiIntent, "Pay Vinayagar Contribution via UPI")
+                                            if (upiIntent.resolveActivity(context.packageManager) != null) {
+                                                upiLauncher.launch(chooser)
+                                            } else {
+                                                onShowMessage("No UPI app detected on this device. Scan the QR code or copy the UPI ID and submit your UTR.")
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFF4C44E),
+                                            contentColor = Color(0xFF321E00)
+                                        ),
+                                        shape = RoundedCornerShape(12.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        modifier = Modifier
+                                            .minimumInteractiveComponentSize()
+                                            .testTag("header_pay_upi_button")
+                                    ) {
+                                        Icon(Icons.Rounded.QrCode2, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = stringResource(R.string.action_upi_pay),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                } else {
+                                    StatusPill(
+                                        label = member.statusEnum().label,
+                                        containerColor = Color.White.copy(alpha = 0.2f),
+                                        contentColor = Color.White
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.height(14.dp))
                             Text(
@@ -467,7 +506,7 @@ fun MemberReceiptsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = DateAndReportUtils.formatTimestamp(payment.createdAt),
+                                text = "Date: ${DateAndReportUtils.formatPaymentDate(payment)} • Recorded ${DateAndReportUtils.formatTimestamp(payment.createdAt)}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -478,11 +517,11 @@ fun MemberReceiptsScreen(
                                     appendLine("*${snapshot.settings.festivalName} - Payment Receipt*")
                                     appendLine("Member: ${payment.memberName}")
                                     appendLine("Month : ${DateAndReportUtils.formatBillingMonth(payment.billingMonth)}")
+                                    appendLine("Date  : ${DateAndReportUtils.formatPaymentDate(payment)}")
                                     appendLine("Amount: ${DateAndReportUtils.formatInr(payment.amount)}")
                                     appendLine("Mode  : ${payment.methodEnum().label}")
                                     if (payment.upiRef.isNotBlank()) appendLine("Ref   : ${payment.upiRef}")
                                     appendLine("Status: ${payment.statusEnum().label}")
-                                    appendLine("Date  : ${DateAndReportUtils.formatTimestamp(payment.createdAt)}")
                                 }
                                 DateAndReportUtils.shareText(context, "Vinayagar Contribution Receipt", receiptText)
                             }

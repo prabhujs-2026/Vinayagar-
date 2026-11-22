@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -38,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,10 +51,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.example.R
 import com.example.data.Member
 import com.example.data.MembershipStatus
 import com.example.data.PaymentStatus
@@ -70,6 +74,7 @@ fun AdminRemindersScreen(
     onPrevMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onSendWhatsAppReminder: (Member) -> Unit,
+    onOpenUpiOptions: (Member) -> Unit,
     onShareGroupNotice: (List<Member>) -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
@@ -346,23 +351,49 @@ fun AdminRemindersScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = { onSendWhatsAppReminder(member) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (alreadyReminded) MaterialTheme.colorScheme.surfaceVariant else extended.whatsapp,
-                                contentColor = if (alreadyReminded) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                            modifier = Modifier.testTag("queue_whatsapp_${member.id}")
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Icon(Icons.AutoMirrored.Rounded.Chat, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (alreadyReminded) "Resend" else "WhatsApp",
-                                style = MaterialTheme.typography.labelMedium
-                            )
+                            OutlinedButton(
+                                onClick = { onOpenUpiOptions(member) },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.secondary
+                                ),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .minimumInteractiveComponentSize()
+                                    .testTag("queue_upi_${member.id}")
+                            ) {
+                                Icon(Icons.Rounded.QrCode2, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = stringResource(R.string.action_upi_pay),
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                            Button(
+                                onClick = { onSendWhatsAppReminder(member) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (alreadyReminded) MaterialTheme.colorScheme.surfaceVariant else extended.whatsapp,
+                                    contentColor = if (alreadyReminded) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .minimumInteractiveComponentSize()
+                                    .testTag("queue_whatsapp_${member.id}")
+                            ) {
+                                Icon(Icons.AutoMirrored.Rounded.Chat, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (alreadyReminded) "Resend" else "Remind",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                     }
                 }
