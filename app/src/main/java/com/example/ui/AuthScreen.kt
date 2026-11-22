@@ -22,15 +22,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -46,15 +45,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import com.example.R
 import com.example.auth.attemptAutoSignIn
@@ -168,35 +168,90 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Card(
-                    shape = MaterialTheme.shapes.large,
+                    shape = MaterialTheme.shapes.extraLarge,
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier.fillMaxWidth()
+                    border = BorderStroke(1.dp, extended.goldAccent.copy(alpha = 0.45f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("welcome_blessing_card")
                 ) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        extended.goldAccent.copy(alpha = 0.12f),
+                                        MaterialTheme.colorScheme.surface,
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
+                                    )
+                                )
+                            )
                     ) {
-                        AuthFeatureRow(
-                            icon = Icons.Rounded.AccountBalanceWallet,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            title = "Seamless UPI Monthly Dues",
-                            subtitle = "Members pay directly via GPay, PhonePe, Paytm or UPI QR"
-                        )
-                        AuthFeatureRow(
-                            icon = Icons.Rounded.NotificationsActive,
-                            tint = extended.whatsapp,
-                            title = "5-Day WhatsApp Reminders",
-                            subtitle = "Automated gentle due alerts 5 days prior to monthly deadline"
-                        )
-                        AuthFeatureRow(
-                            icon = Icons.Rounded.Lock,
-                            tint = MaterialTheme.colorScheme.primary,
-                            title = "Admin-Protected Real-Time Ledger",
-                            subtitle = "Only committee admins can edit, verify, or delete records"
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 22.dp, vertical = 22.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = extended.goldAccent.copy(alpha = 0.18f)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = extended.goldAccent,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.welcome_blessing_mantra),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = extended.goldAccent,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = stringResource(R.string.welcome_card_title),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Text(
+                                text = stringResource(R.string.welcome_card_message),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 22.sp
+                            )
+
+                            HorizontalDivider(
+                                color = extended.goldAccent.copy(alpha = 0.28f),
+                                modifier = Modifier
+                                    .width(72.dp)
+                                    .padding(top = 4.dp)
+                            )
+
+                            Text(
+                                text = stringResource(R.string.welcome_card_signoff),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontStyle = FontStyle.Italic,
+                                color = MaterialTheme.colorScheme.secondary,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 }
 
@@ -285,46 +340,6 @@ fun AuthScreen(
                     textAlign = TextAlign.Center
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun AuthFeatureRow(
-    icon: ImageVector,
-    tint: androidx.compose.ui.graphics.Color,
-    title: String,
-    subtitle: String
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(tint.copy(alpha = 0.14f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

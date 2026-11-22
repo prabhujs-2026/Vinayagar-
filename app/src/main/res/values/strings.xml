@@ -2,7 +2,11 @@
     <string name="app_name">Vinayagar Fund</string>
     <string name="tagline">Monthly Vinayagar Festival Contributions</string>
     <string name="sign_in_with_google">Sign in with Google</string>
-    <string name="sign_in_subtitle">Manage committee collections or pay your monthly Vinayagar festival dues seamlessly via UPI.</string>
+    <string name="sign_in_subtitle">United in devotion for our monthly Vinayagar festival offering.</string>
+    <string name="welcome_blessing_mantra">OM GAM GANAPATAYE NAMAHA</string>
+    <string name="welcome_card_title">Welcome to Our Vinayagar Vizha Family</string>
+    <string name="welcome_card_message">May Lord Vinayagar remove every obstacle and bless every home with peace, wisdom, and prosperity. Each monthly offering we unite together brings light, devotion, and celebration to our sacred festival.</string>
+    <string name="welcome_card_signoff">Together in Devotion • United in Celebration</string>
     <string name="signing_in">Signing in…</string>
     <string name="nav_home">Home</string>
     <string name="nav_members">Members</string>
